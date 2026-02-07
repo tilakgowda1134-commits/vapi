@@ -1,38 +1,38 @@
-from flask import Flask, jsonify, request
-from flask_cors import CORS
+from flask import Flask, jsonify
 import requests
 from bs4 import BeautifulSoup
 
 app = Flask(__name__)
-CORS(app)  # IMPORTANT for Vapi
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/")
 def home():
     return jsonify({"status": "Tadawi API running"})
 
-@app.route("/doctors", methods=["GET", "POST"])
+@app.route("/doctors")
 def get_doctors():
     try:
         url = "https://tadawi.ae/"
-        headers = {
-            "User-Agent": "Mozilla/5.0"
-        }
+        headers = {"User-Agent": "Mozilla/5.0"}
 
-        response = requests.get(url, headers=headers, timeout=8)
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
         soup = BeautifulSoup(response.text, "html.parser")
 
-        doctors = []
-
+        doctors = set()
         for tag in soup.find_all("h3"):
             name = tag.get_text(strip=True)
-            if name:
-                doctors.append(name)
+            if name and len(name) < 60:
+                doctors.add(name)
 
-        # ⚠️ Return simple JSON (Vapi prefers this)
-        return jsonify(doctors)
+        return jsonify({
+            "status": "success",
+            "count": len(doctors),
+            "doctors": sorted(doctors)
+        })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     app.run()
