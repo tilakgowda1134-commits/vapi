@@ -12,29 +12,35 @@ def home():
 def get_doctors():
     try:
         url = "https://tadawi.ae/"
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = {
+            "User-Agent": "Mozilla/5.0"
+        }
 
         response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
+
         soup = BeautifulSoup(response.text, "html.parser")
 
-        doctors = []
+        doctors = set()  # use set to avoid duplicates
 
         for tag in soup.find_all("h3"):
             name = tag.get_text(strip=True)
-            if name:
-                doctors.append(name)
+
+            # filter junk headings
+            if name and len(name) < 60:
+                doctors.add(name)
 
         return jsonify({
             "status": "success",
             "count": len(doctors),
-            "doctors": doctors
+            "doctors": sorted(list(doctors))
         })
 
     except Exception as e:
         return jsonify({
             "status": "error",
             "message": str(e)
-        })
+        }), 500
 
 if __name__ == "__main__":
     app.run()
